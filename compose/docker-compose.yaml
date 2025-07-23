@@ -1,0 +1,13 @@
+services:
+
+  edge:
+    image: whicr.azurecr.io/webmethods-edge-runtime:11.2.0
+    container_name: edge
+    ports:
+      - "5555:5555"
+      - "5543:5543"
+    env_file:
+      - .env
+
+
+
