@@ -1,0 +1,128 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: edge-runtime
+---
+# uncomment this if deploying to OCP
+# apiVersion: rbac.authorization.k8s.io/v1
+# kind: RoleBinding
+# metadata:
+#   name: use-restricted-scc
+# subjects:
+#   - kind: ServiceAccount
+#     name: edge-runtime
+#     namespace: <your-namespace>
+# roleRef:
+#   kind: ClusterRole
+#   name: system:openshift:scc:restricted
+#   apiGroup: rbac.authorization.k8s.io
+---
+# To create the iwhi-regcred secret, submit this command:
+# oc create secret docker-registry iwhi-regcred --docker-server=${WHI_CR_SERVER} --docker-username=${WHI_CR_USERNAME} --docker-password=${WHI_CR_PASSWORD}
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: edge-runtime
+  labels:
+    app.kubernetes.io/instance: edge-runtime
+    app.kubernetes.io/name: microservicesruntime
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: edge-runtime
+      app.kubernetes.io/name: microservicesruntime
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/instance: edge-runtime
+        app.kubernetes.io/name: microservicesruntime
+      annotations:
+        prometheus.io/scrape: 'true'
+        prometheus.io/path: /metrics
+        prometheus.io/port: '5555'
+        prometheus.io/scheme: http
+    spec:
+      serviceAccountName: edge-runtime
+      restartPolicy: Always
+      imagePullSecrets:
+        - name: iwhi-regcred
+      securityContext: {}  
+      containers:
+        - name: edge-runtime
+          image: whicr.azurecr.io/webmethods-edge-runtime:11.2.0
+          imagePullPolicy: Always
+          ports:
+            - name: https
+              containerPort: 5543
+              protocol: TCP
+            - name: http
+              containerPort: 5555
+              protocol: TCP
+            - name: diag
+              containerPort: 9999
+              protocol: TCP
+          env:
+            - name: SAG_IS_CLOUD_REGISTER_URL
+              valueFrom:
+                secretKeyRef:
+                  key: SAG_IS_CLOUD_REGISTER_URL
+                  name: edge-secrets
+            - name: SAG_IS_EDGE_CLOUD_ALIAS
+              valueFrom:
+                secretKeyRef:
+                  key: SAG_IS_EDGE_CLOUD_ALIAS
+                  name: edge-secrets
+            - name: SAG_IS_CLOUD_REGISTER_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  key: SAG_IS_CLOUD_REGISTER_TOKEN
+                  name: edge-secrets
+          securityContext:
+            runAsNonRoot: true
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: [ "ALL" ]
+            seccompProfile:
+              type: RuntimeDefault
+          livenessProbe:
+            tcpSocket:
+              port: http
+            timeoutSeconds: 2
+            periodSeconds: 15
+            successThreshold: 1
+            failureThreshold: 3
+          readinessProbe:
+            tcpSocket:
+              port: http
+            periodSeconds: 15
+            timeoutSeconds: 2
+            successThreshold: 1
+            failureThreshold: 3
+          startupProbe:
+            tcpSocket:
+              port: http
+            initialDelaySeconds: 20
+            timeoutSeconds: 1
+            periodSeconds: 5
+            successThreshold: 1
+            failureThreshold: 32
+          resources:
+            requests:
+              cpu: 500m
+              memory: 512Mi
+            limits:
+              cpu: "1"
+              memory: 2000Mi
+      volumes:
+        - name: application-properties
+          configMap:
+            name: edge-runtime
+            items:
+            - key:  application.properties
+              path: application.properties
+        - name: edge-secrets
+          secret:
+            secretName: edge-secrets
+
