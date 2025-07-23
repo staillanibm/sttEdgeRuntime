@@ -3,22 +3,8 @@ kind: ServiceAccount
 metadata:
   name: edge-runtime
 ---
-# uncomment this if deploying to OCP
-# apiVersion: rbac.authorization.k8s.io/v1
-# kind: RoleBinding
-# metadata:
-#   name: use-restricted-scc
-# subjects:
-#   - kind: ServiceAccount
-#     name: edge-runtime
-#     namespace: <your-namespace>
-# roleRef:
-#   kind: ClusterRole
-#   name: system:openshift:scc:restricted
-#   apiGroup: rbac.authorization.k8s.io
----
 # To create the iwhi-regcred secret, submit this command:
-# oc create secret docker-registry iwhi-regcred --docker-server=${WHI_CR_SERVER} --docker-username=${WHI_CR_USERNAME} --docker-password=${WHI_CR_PASSWORD}
+# kubectl create secret docker-registry iwhi-regcred --docker-server=${WHI_CR_SERVER} --docker-username=${WHI_CR_USERNAME} --docker-password=${WHI_CR_PASSWORD}
 
 apiVersion: apps/v1
 kind: Deployment
@@ -51,7 +37,7 @@ spec:
       securityContext: {}  
       containers:
         - name: edge-runtime
-          image: whicr.azurecr.io/webmethods-edge-runtime:11.2.0
+          image: iwhicr.azurecr.io/webmethods-edge-runtime:11.2.0
           imagePullPolicy: Always
           ports:
             - name: https
@@ -68,24 +54,17 @@ spec:
               valueFrom:
                 secretKeyRef:
                   key: SAG_IS_CLOUD_REGISTER_URL
-                  name: edge-secrets
+                  name: edge-secret
             - name: SAG_IS_EDGE_CLOUD_ALIAS
               valueFrom:
                 secretKeyRef:
                   key: SAG_IS_EDGE_CLOUD_ALIAS
-                  name: edge-secrets
+                  name: edge-secret
             - name: SAG_IS_CLOUD_REGISTER_TOKEN
               valueFrom:
                 secretKeyRef:
                   key: SAG_IS_CLOUD_REGISTER_TOKEN
-                  name: edge-secrets
-          securityContext:
-            runAsNonRoot: true
-            allowPrivilegeEscalation: false
-            capabilities:
-              drop: [ "ALL" ]
-            seccompProfile:
-              type: RuntimeDefault
+                  name: edge-secret
           livenessProbe:
             tcpSocket:
               port: http
@@ -116,13 +95,7 @@ spec:
               cpu: "1"
               memory: 2000Mi
       volumes:
-        - name: application-properties
-          configMap:
-            name: edge-runtime
-            items:
-            - key:  application.properties
-              path: application.properties
-        - name: edge-secrets
+        - name: edge-secret
           secret:
-            secretName: edge-secrets
+            secretName: edge-secret
 
