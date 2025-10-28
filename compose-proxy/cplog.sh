@@ -1,0 +1,1 @@
+podman cp edge:/opt/softwareag/IntegrationServer/logs/server.log ./server.log

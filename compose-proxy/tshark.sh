@@ -1,0 +1,2 @@
+#!/bin/zsh
+/Applications/Wireshark.app/Contents/MacOS/tshark -r ./captures/$1.pcap -T fields -e frame.number -e frame.time_relative -e ip.src -e ip.dst -e tcp.srcport -e tcp.dstport -e _ws.col.Protocol -e _ws.col.Info > ./captures/$1.txt

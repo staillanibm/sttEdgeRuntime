@@ -1,0 +1,53 @@
+services:
+
+  edge:
+    image: iwhicr.azurecr.io/webmethods-edge-runtime:11.2.1
+    container_name: edge
+    ports:
+      - "15555:5555"
+    env_file:
+      - .env
+    healthcheck:
+      interval: 5s
+      retries: 24
+      test: ["CMD-SHELL", "curl -o /dev/null -s -w '%{http_code}' http://localhost:5555 | grep -qE '^(200|3[0-9]{2})$'"]
+
+  sqlserver:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: sqlserver
+    hostname: sqlserver
+    ports:
+      - "1433:1433"
+    environment:
+      - ACCEPT_EULA=Y
+      - SA_PASSWORD=$env{DB_PASSWORD}
+      - MSSQL_PID=Express
+    volumes:
+      - sqlserver_data:/var/opt/mssql
+    restart: unless-stopped
+
+  sniffer:
+    image: nicolaka/netshoot
+    container_name: edge-sniffer
+    network_mode: "service:edge"
+    command: [
+      "tcpdump", "-i", "any", "-nn", "-s", "0",
+      "-G", "9999999",
+      "-w", "/captures/edge-direct-%Y%m%d-%H%M%S.pcap"
+    ]
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW
+    volumes:
+      - ./captures:/captures
+    depends_on:
+      - edge
+
+volumes:
+  sqlserver_data:
+    driver: local
+  sqlserver_log:
+    driver: local
+  sqlserver_secrets:
+    driver: local
+

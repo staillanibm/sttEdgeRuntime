@@ -1,0 +1,90 @@
+services:
+
+  squid:
+    image: sameersbn/squid:3.5.27-2
+    container_name: squid
+    volumes:
+    #  - ./squid.conf:/etc/squid/squid.conf:ro
+    #  - ./squid-block.conf:/etc/squid/squid.conf:ro
+      - ./squid-allow.conf:/etc/squid/squid.conf:ro
+    ports:
+      - "3128:3128"
+    networks:
+      - default
+      - isolated_net
+
+  edge:
+    image: iwhicr.azurecr.io/webmethods-edge-runtime:11.2.1
+    container_name: edge
+    ports:
+      - "15555:5555"
+    env_file:
+      - .env
+    environment:
+      JAVA_CUSTOM_OPTS: >-
+        -Dhttps.proxyHost=squid
+        -Dhttps.proxyPort=3128
+        -Dhttp.proxyHost=squid
+        -Dhttp.proxyPort=3128
+        -Dhttp.nonProxyHosts="localhost|127.0.0.1|edge|sqlserver|10.*|172.*|192.168.*"
+        -Dhttps.nonProxyHosts="localhost|127.0.0.1|edge|sqlserver|10.*|172.*|192.168.*"
+    networks:
+      - isolated_net
+    healthcheck:
+      interval: 5s
+      retries: 24
+      test: ["CMD-SHELL", "curl -o /dev/null -s -w '%{http_code}' http://localhost:5555 | grep -qE '^(200|3[0-9]{2})$'"]
+
+  sqlserver:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: sqlserver
+    hostname: sqlserver
+    ports:
+      - "1433:1433"
+    environment:
+      - ACCEPT_EULA=Y
+      - SA_PASSWORD=$env{DB_PASSWORD}
+      - MSSQL_PID=Express
+    volumes:
+      - sqlserver_data:/var/opt/mssql
+    restart: unless-stopped
+    networks:
+      - default
+      - isolated_net
+
+  sniffer:
+    image: nicolaka/netshoot
+    container_name: edge-sniffer
+    network_mode: "service:edge"   
+    command: [
+      "tcpdump", "-i", "any", "-nn", "-s", "0",
+      "-U",
+      "-G", "9999999",
+      "-w", "/captures/edge-proxy-%Y%m%d-%H%M%S.pcap"
+    ]
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW
+    volumes:
+      - ./captures:/captures
+    depends_on:
+      - edge
+
+volumes:
+  sqlserver_data:
+    driver: local
+  sqlserver_log:
+    driver: local
+  sqlserver_secrets:
+    driver: local
+
+networks:
+  isolated_net:
+    internal: true
+  default:
+
+# networks:
+#   isolated_net:
+#     name: isolated_net 
+#     external: true
+#   default:
