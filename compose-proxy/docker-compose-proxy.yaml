@@ -14,7 +14,8 @@ services:
       - isolated_net
 
   edge:
-    image: iwhicr.azurecr.io/webmethods-edge-runtime:11.2.1
+    image: cdf-edge-runtime:11.2.3.3-js
+    #image: iwhicr.azurecr.io/webmethods-edge-runtime:11.2.3
     container_name: edge
     ports:
       - "15555:5555"
@@ -28,47 +29,181 @@ services:
         -Dhttp.proxyPort=3128
         -Dhttp.nonProxyHosts="localhost|127.0.0.1|edge|sqlserver|10.*|172.*|192.168.*"
         -Dhttps.nonProxyHosts="localhost|127.0.0.1|edge|sqlserver|10.*|172.*|192.168.*"
+    volumes:
+      - ./application.properties:/opt/softwareag/IntegrationServer/application.properties:ro
+      - ./es-stt-cert.p12:/certs/es-cert.p12:ro
+      - ./kafka/secrets/kafka.truststore.jks:/certs/kafka.truststore.jks:ro
+      - ./srv-truststore.p12:/certs/truststore.p12:ro
+      - ./client.p12:/certs/client.p12:ro
     networks:
       - isolated_net
+      - default
     healthcheck:
       interval: 5s
       retries: 24
       test: ["CMD-SHELL", "curl -o /dev/null -s -w '%{http_code}' http://localhost:5555 | grep -qE '^(200|3[0-9]{2})$'"]
 
-  sqlserver:
-    image: mcr.microsoft.com/mssql/server:2022-latest
-    container_name: sqlserver
-    hostname: sqlserver
+  edge-test:
+    image: cdf-edge-runtime:11.2.3.3-full
+    container_name: edge-test
     ports:
-      - "1433:1433"
+      - "25555:5555"
+    env_file:
+      - .env_test
     environment:
-      - ACCEPT_EULA=Y
-      - SA_PASSWORD=$env{DB_PASSWORD}
-      - MSSQL_PID=Express
+      JAVA_CUSTOM_OPTS: >-
+        -Dhttps.proxyHost=squid
+        -Dhttps.proxyPort=3128
+        -Dhttp.proxyHost=squid
+        -Dhttp.proxyPort=3128
+        -Dhttp.nonProxyHosts="localhost|127.0.0.1|edge|sqlserver|10.*|172.*|192.168.*"
+        -Dhttps.nonProxyHosts="localhost|127.0.0.1|edge|sqlserver|10.*|172.*|192.168.*"
     volumes:
-      - sqlserver_data:/var/opt/mssql
-    restart: unless-stopped
+      - ./application.properties.test:/opt/softwareag/IntegrationServer/application.properties:ro
+      - ./kafka/secrets/kafka.truststore.jks:/certs/kafka.truststore.jks:ro
+      - ./srv-truststore.p12:/certs/truststore.p12:ro
+      - ./client.p12:/certs/client.p12:ro
+    networks:
+      - isolated_net
+      - default
+    healthcheck:
+      interval: 5s
+      retries: 24
+      test: ["CMD-SHELL", "curl -o /dev/null -s -w '%{http_code}' http://localhost:5555 | grep -qE '^(200|3[0-9]{2})$'"]
+
+  postgres:
+    image: postgres:latest
+    container_name: postgres
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=${DB_PASSWORD}
+      - POSTGRES_DB=${DB_NAME}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "postgres", "-d", "${DB_NAME}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
     networks:
       - default
       - isolated_net
 
-  sniffer:
-    image: nicolaka/netshoot
-    container_name: edge-sniffer
-    network_mode: "service:edge"   
-    command: [
-      "tcpdump", "-i", "any", "-nn", "-s", "0",
-      "-U",
-      "-G", "9999999",
-      "-w", "/captures/edge-proxy-%Y%m%d-%H%M%S.pcap"
-    ]
-    cap_add:
-      - NET_ADMIN
-      - NET_RAW
+  # sniffer:
+  #   image: nicolaka/netshoot
+  #   container_name: edge-sniffer
+  #   network_mode: "service:edge"   
+  #   command: [
+  #     "tcpdump", "-i", "any", "-nn", "-s", "0",
+  #     "-U",
+  #     "-G", "9999999",
+  #     "-w", "/captures/edge-proxy-%Y%m%d-%H%M%S.pcap"
+  #   ]
+  #   cap_add:
+  #     - NET_ADMIN
+  #     - NET_RAW
+  #   volumes:
+  #     - ./captures:/captures
+  #   depends_on:
+  #     - edge
+
+  kafka:
+    image: confluentinc/cp-kafka:7.6.0
+    #container_name: kafka-kraft-sasl-ssl
+    container_name: kafka
+    hostname: kafka
+    ports:
+      - "9092:9092"
+      - "9093:9093"
+    environment:
+      # KRaft mode configuration
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9094
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+
+      # Listeners configuration
+      KAFKA_LISTENERS: SASL_SSL://0.0.0.0:9092,CONTROLLER://0.0.0.0:9094,PLAINTEXT://0.0.0.0:9093
+      KAFKA_ADVERTISED_LISTENERS: SASL_SSL://kafka:9092,PLAINTEXT://kafka:9093
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: SASL_SSL:SASL_SSL,CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+
+      # SASL configuration
+      KAFKA_SASL_MECHANISM_INTER_BROKER_PROTOCOL: PLAIN
+      KAFKA_SASL_ENABLED_MECHANISMS: PLAIN
+
+      # SSL configuration
+      KAFKA_SSL_KEYSTORE_FILENAME: kafka.keystore.jks
+      KAFKA_SSL_KEYSTORE_CREDENTIALS: keystore_creds
+      KAFKA_SSL_KEY_CREDENTIALS: key_creds
+      KAFKA_SSL_TRUSTSTORE_FILENAME: kafka.truststore.jks
+      KAFKA_SSL_TRUSTSTORE_CREDENTIALS: truststore_creds
+      KAFKA_SSL_CLIENT_AUTH: none
+      KAFKA_SSL_ENDPOINT_IDENTIFICATION_ALGORITHM: ""
+
+      # Cluster configuration
+      CLUSTER_ID: 'MkU3OEVBNTcwNTJENDM2Qk'
+
+      # Log configuration
+      KAFKA_LOG_DIRS: /var/lib/kafka/data
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+
+      # JAAS configuration and JVM settings
+      KAFKA_OPTS: "-Djava.security.auth.login.config=/etc/kafka/kafka_server_jaas.conf"
+      KAFKA_HEAP_OPTS: "-Xms512m -Xmx2g"
+
     volumes:
-      - ./captures:/captures
-    depends_on:
-      - edge
+      - ./kafka/secrets:/etc/kafka/secrets
+      - ./kafka/config/kafka_server_jaas.conf:/etc/kafka/kafka_server_jaas.conf
+      - kafka-data:/var/lib/kafka/data
+
+    command: >
+      bash -c "
+      if [ ! -f /var/lib/kafka/data/meta.properties ]; then
+        kafka-storage format -t MkU3OEVBNTcwNTJENDM2Qk -c /etc/kafka/kafka.properties --ignore-formatted || true
+      fi &&
+      /etc/confluent/docker/run
+      "
+    networks:
+      - default
+      - isolated_net
+
+  # mongo:
+  #   image: mongo:8.0
+  #   container_name: mongo
+  #   restart: unless-stopped
+  #   ports:
+  #     - "27017:27017"
+  #   environment:
+  #     MONGO_INITDB_ROOT_USERNAME: root
+  #     MONGO_INITDB_ROOT_PASSWORD: Password123
+  #   volumes:
+  #     - mongo_data:/data/db
+  #   command: ["--bind_ip_all"]
+  #   healthcheck:
+  #     test: ["CMD", "mongosh", "--quiet", "--eval", "db.runCommand({ping:1}).ok"]
+  #     interval: 10s
+  #     timeout: 5s
+  #     retries: 5
+  #   networks:
+  #     - default
+  #     - isolated_net
+
+  # mongo-express:
+  #   image: mongo-express:1.0
+  #   restart: unless-stopped
+  #   depends_on: [mongo]
+  #   ports: ["8081:8081"]
+  #   environment:
+  #     ME_CONFIG_MONGODB_URL: "mongodb://root:Password123@mongo:27017/?authSource=admin"
+  #     ME_CONFIG_BASICAUTH_ENABLED: "false"
+  #   networks:
+  #     - default
+  #     - isolated_net
 
 volumes:
   sqlserver_data:
@@ -77,14 +212,15 @@ volumes:
     driver: local
   sqlserver_secrets:
     driver: local
+  postgres-data:
+    driver: local
+  mongo_data:
+    driver: local
+  kafka-data:
+    driver: local
 
 networks:
   isolated_net:
     internal: true
   default:
 
-# networks:
-#   isolated_net:
-#     name: isolated_net 
-#     external: true
-#   default:

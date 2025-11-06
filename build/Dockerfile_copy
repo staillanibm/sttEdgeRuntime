@@ -1,0 +1,26 @@
+FROM iwhicr.azurecr.io/webmethods-edge-runtime:11.2.1
+
+# Copy files
+COPY --chown=1724:0 WmJDBCAdapter /opt/softwareag/IntegrationServer/packages/WmJDBCAdapter
+COPY --chown=1724:0 WmMongoDBAdapter /opt/softwareag/IntegrationServer/packages/WmMongoDBAdapter
+COPY --chown=1724:0 WmAmazonS3Provider /opt/softwareag/IntegrationServer/packages/WmAmazonS3Provider
+COPY --chown=1724:0 WmKafkaAdapter /opt/softwareag/IntegrationServer/packages/WmKafkaAdapter
+COPY --chown=1724:0 JcPublicTools /opt/softwareag/IntegrationServer/packages/JcPublicTools
+
+USER 0
+
+# Set authorizations for OpenShift
+RUN chgrp -R 0 \
+      /opt/softwareag/IntegrationServer/packages/WmJDBCAdapter \
+      /opt/softwareag/IntegrationServer/packages/WmMongoDBAdapter \
+      /opt/softwareag/IntegrationServer/packages/WmAmazonS3Provider \
+      /opt/softwareag/IntegrationServer/packages/WmKafkaAdapter \
+      /opt/softwareag/IntegrationServer/packages/JcPublicTools && \
+    chmod -R g=u \
+      /opt/softwareag/IntegrationServer/packages/WmJDBCAdapter \
+      /opt/softwareag/IntegrationServer/packages/WmMongoDBAdapter \
+      /opt/softwareag/IntegrationServer/packages/WmAmazonS3Provider \
+      /opt/softwareag/IntegrationServer/packages/WmKafkaAdapter \
+      /opt/softwareag/IntegrationServer/packages/JcPublicTools
+
+USER 1724

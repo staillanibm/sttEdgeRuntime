@@ -23,30 +23,6 @@ keystore.CDF_KEYSTORE.ksPassword=Password123@
 keystore.CDF_KEYSTORE.ksStoreProviderName=SUN
 keystore.CDF_KEYSTORE.ksType=PKCS12
 
-# artConnection.cdfKafka.cdfKafka.connections.kafka_cdf_consumer.connectionEnabled=true
-# artConnection.cdfKafka.cdfKafka.connections.kafka_cdf_consumer.connectionSettings.serverList=$env{KAFKA_BOOTSTRAP_SERVERS}
-# artConnection.cdfKafka.cdfKafka.connections.kafka_cdf_consumer.connectionSettings.securityProtocol=SASL_SSL
-# artConnection.cdfKafka.cdfKafka.connections.kafka_cdf_consumer.connectionSettings.clientID=$env{KAFKA_CLIENT_ID}
-# artConnection.cdfKafka.cdfKafka.connections.kafka_cdf_consumer.connectionSettings.groupId=$env{KAFKA_CLIENT_ID}
-# artConnection.cdfKafka.cdfKafka.connections.kafka_cdf_consumer.connectionSettings.jaasConfig=$env{KAFKA_JAAS_CONFIG}
-# artConnection.cdfKafka.cdfKafka.connections.kafka_cdf_consumer.connectionSettings.keyDeserializer=org.apache.kafka.common.serialization.StringDeserializer
-# artConnection.cdfKafka.cdfKafka.connections.kafka_cdf_consumer.connectionSettings.valueDeserializer=com.wm.adapter.wmkafka.idata.IDataDeserializer
-# artConnection.cdfKafka.cdfKafka.connections.kafka_cdf_consumer.connectionSettings.autoOffsetReset=earliest
-# artConnection.cdfKafka.cdfKafka.connections.kafka_cdf_consumer.connectionSettings.enableAutoCommit=false
-# artConnection.cdfKafka.cdfKafka.connections.kafka_cdf_consumer.connectionSettings.autoCommitInterval=
-# artConnection.cdfKafka.cdfKafka.connections.kafka_cdf_consumer.connectionSettings.trustStoreAlias=ES_TRUSTSTORE
-# artConnection.cdfKafka.cdfKafka.connections.kafka_cdf_consumer.connectionSettings.otherProperties=sasl.mechanism=SCRAM-SHA-512
-
-# artConnection.cdfKafka.cdfKafka.connections.kafka_cdf_producer.connectionEnabled=true
-# artConnection.cdfKafka.cdfKafka.connections.kafka_cdf_producer.connectionSettings.serverList=$env{KAFKA_BOOTSTRAP_SERVERS}
-# artConnection.cdfKafka.cdfKafka.connections.kafka_cdf_producer.connectionSettings.securityProtocol=SASL_SSL
-# artConnection.cdfKafka.cdfKafka.connections.kafka_cdf_producer.connectionSettings.clientID=$env{KAFKA_CLIENT_ID}
-# artConnection.cdfKafka.cdfKafka.connections.kafka_cdf_producer.connectionSettings.jaasConfig=$env{KAFKA_JAAS_CONFIG}
-# artConnection.cdfKafka.cdfKafka.connections.kafka_cdf_producer.connectionSettings.keySerializerClass=org.apache.kafka.common.serialization.StringSerializer
-# artConnection.cdfKafka.cdfKafka.connections.kafka_cdf_producer.connectionSettings.valueSerializerClass=com.wm.adapter.wmkafka.idata.IDataSerializer
-# artConnection.cdfKafka.cdfKafka.connections.kafka_cdf_producer.connectionSettings.trustStoreAlias=ES_TRUSTSTORE
-# artConnection.cdfKafka.cdfKafka.connections.kafka_cdf_producer.connectionSettings.otherProperties=sasl.mechanism=SCRAM-SHA-512
-
 artConnection.cdfKafka.cdfKafka.connections.kafka_cdf_consumer.connectionEnabled=true
 artConnection.cdfKafka.cdfKafka.connections.kafka_cdf_consumer.connectionSettings.serverList=kafka:9092
 artConnection.cdfKafka.cdfKafka.connections.kafka_cdf_consumer.connectionSettings.securityProtocol=SASL_SSL
@@ -70,3 +46,11 @@ artConnection.cdfKafka.cdfKafka.connections.kafka_cdf_producer.connectionSetting
 artConnection.cdfKafka.cdfKafka.connections.kafka_cdf_producer.connectionSettings.valueSerializerClass=com.wm.adapter.wmkafka.idata.IDataSerializer
 artConnection.cdfKafka.cdfKafka.connections.kafka_cdf_producer.connectionSettings.trustStoreAlias=KAFKA_TRUSTSTORE
 artConnection.cdfKafka.cdfKafka.connections.kafka_cdf_producer.connectionSettings.otherProperties=sasl.mechanism=PLAIN
+
+artConnection.FR_STT_PartyManagmentProject.project.fr_stt_partymanagment.WmJDBCAdapter.com_wm_adapter_wmjdbc_JDBCAdapter.connections.cdr_party.connectionEnabled=true
+artConnection.FR_STT_PartyManagmentProject.project.fr_stt_partymanagment.WmJDBCAdapter.com_wm_adapter_wmjdbc_JDBCAdapter.connections.cdr_party.connectionSettings.databaseName=sandbox
+artConnection.FR_STT_PartyManagmentProject.project.fr_stt_partymanagment.WmJDBCAdapter.com_wm_adapter_wmjdbc_JDBCAdapter.connections.cdr_party.connectionSettings.user=postgres
+artConnection.FR_STT_PartyManagmentProject.project.fr_stt_partymanagment.WmJDBCAdapter.com_wm_adapter_wmjdbc_JDBCAdapter.connections.cdr_party.connectionSettings.password=$env{DB_PASSWORD}
+artConnection.FR_STT_PartyManagmentProject.project.fr_stt_partymanagment.WmJDBCAdapter.com_wm_adapter_wmjdbc_JDBCAdapter.connections.cdr_party.connectionSettings.serverName=postgres
+artConnection.FR_STT_PartyManagmentProject.project.fr_stt_partymanagment.WmJDBCAdapter.com_wm_adapter_wmjdbc_JDBCAdapter.connections.cdr_party.connectionSettings.portNumber=5432
+
